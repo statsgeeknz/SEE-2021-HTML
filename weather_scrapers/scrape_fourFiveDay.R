@@ -107,27 +107,24 @@ weatherScraperFourFiveDay <- function(htmlFile){
   #= level of icing groups + snow height (cm) and height (m above sea-level I guess)
   
   snowPath <- html_nodes(htmlTarget, "tr:nth-child(12) .combo td")
-
-  snowPath <- unlist(strsplit(as.character(snowPath), " "))
-  snowVals <- snowPath[grep("value", snowPath)]
-  snowVals <- gsub('value=\"', "", snowVals) %>% 
-    gsub('"></td>', "", .) %>% gsub('">\n</td>', "", .) 
   
-
-  snow_depth <- snowVals[seq(1, 27, by = 3)]
-  icing <- snowVals[seq(2, 27, by = 3)]
-  snow_height <- snowVals[seq(3, 27, by = 3)]
+  snowPath <- snowPath[grepl("value", snowPath)]
+  
+  iceLoc <- grepl("line_icing", snowPath)
+  snowFallLoc <- grepl("snowfall", snowPath)
+  snowHeightLoc <- grepl("snow_height", snowPath)
+  
+  snowVals <- regmatches(snowPath, gregexpr('(?<=value=").*(?=" disable)', snowPath, perl = TRUE )) %>% unlist()
+  
+  snow_depth <- as.numeric(snowVals[snowFallLoc])
+  icing <- snowVals[iceLoc] 
+  icing <- ifelse(icing == "Nil", 0, 1)
+  snow_height <- snowVals[snowHeightLoc]
+  snow_height <- as.numeric(ifelse(snow_height == "N/A", NA, snow_height)) 
   
   snowValsArray <- data.frame(snow_depth, icing, snow_height, stringsAsFactors = F)
   
-  # average the snow depths, heights usually empty (choose first one per day), icing made binary
-  snowValsArray <- snowValsArray %>% mutate(
-      snow_depth = as.numeric(snow_depth), 
-      icing = ifelse(icing == "Nil", 0, 1),
-      snow_height = as.numeric(ifelse(snow_height == "N/A", NA, snow_height))
-    )
   
-
 # Lightning ---------------------------------------------------------------
   #= lightning categories
   
