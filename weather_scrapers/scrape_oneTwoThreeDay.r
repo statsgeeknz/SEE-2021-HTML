@@ -100,16 +100,15 @@ weatherScraperOneTwoDay <- function(htmlFile){
 # Temperature -------------------------------------------------------------
   # temperature - min and max. 
   
-  maxMinTempPath <- html_nodes(htmlTarget, "p+ table tr:nth-child(4) td+ td")
+  maxMinTempPath <- html_nodes(htmlTarget, "p~ p+ table tr:nth-child(12) td , p~ p+ table tr:nth-child(11) td")
   
-  maxMinTempPath <- maxMinTempPath[c(1:36)]
-
-  tempVals <- lapply(maxMinTempPath, function(q){
-    maxMinTemps <- strsplit(as.character(q), "value=")[[1]][2]
-    maxMinTemps <- strsplit(maxMinTemps, '\"')[[1]][2]
-    maxMinTemps 
-    }) %>% 
-    unlist() %>% as.numeric() %>% matrix(., ncol = 2, byrow = T) %>%
+  browser()
+  
+  maxMinTempPath <- maxMinTempPath[grepl("value", maxMinTempPath)]
+  
+  tempVals <- regmatches(maxMinTempPath, gregexpr("(?<=value).*(?=disable)", maxMinTempPath, perl = TRUE )) %>% 
+    unlist() %>% parse_number() %>% 
+    matrix(., ncol = 2, byrow = T) %>%
     as.data.frame() %>% rename(temp_max = V1, temp_min = V2)
 
 
@@ -159,22 +158,21 @@ weatherScraperOneTwoDay <- function(htmlFile){
   
   rainPath <- html_nodes(htmlTarget, "p~ p+ table tr:nth-child(12) td , p~ p+ table tr:nth-child(11) td")
     
-  
+    rainPath <- rainPath[grepl("value", maxMinTempPath)]
     
-    rainVals <- lapply(rainPath, function(q){
-      temp <- strsplit(as.character(q), "value=")[[1]][c(2,3)]
-      temp <- strsplit(temp, '\"')
-      temp <- c(temp[[1]][2], temp[[2]][2])
-      temp
-    }) %>% unlist()
+    rainVals <- regmatches(rainPath, gregexpr("(?<=value).*(?=disable)", rainPath, perl = TRUE )) %>% 
+      unlist() %>% parse_number() %>% 
+      matrix(., ncol = 2, byrow = T) %>%
+      as.data.frame() %>% rename(rain_min = V1, rain_max = V2)
     
-    rainVals <- na.omit(rainVals)
+    rainDays <- rep(c("Day1", "Day2", "Day3"), rep(9*2, 3))
+    rainRegions <- rep(1:9, 3*2)
     
-    summaryGroup <- c(rep(rep(1:9, rep(2, 9)),2), rep(rep(10:18, rep(2, 9)),2))
-    browser()
-    rainVals <- data.frame(summaryGroup = summaryGroup, rainFall = as.numeric(rainVals)) %>%
+    summaryGroup <- paste(rainDays, rainRegions, sep = "_")
+    
+    rainFall <- rainVals %>% bind_cols(summaryGroup = summaryGroup) %>% 
       group_by(summaryGroup) %>%
-      summarise(rain_max = max(rainFall, na.rm = T), rain_min = min(rainFall, na.rm = T)) %>%
+      summarise(rain_min = min(rain_min, na.rm = T), rain_max = max(rain_max, na.rm = T)) %>%
       select(-summaryGroup)  
   
   
@@ -227,7 +225,7 @@ weatherScraperOneTwoDay <- function(htmlFile){
 # gather all together -----------------------------------------------------
 
   outputFrame <- data.frame(scheduledForecast = scheduledForecast, dateOfForecast = dateVals, day = days, region = rep(groups, numDays), regionCode = groupCode, 
-                            tempVals, windValsArray, rainVals, snowValsArray, lightningCat = lightningCat, risk = oneTwoThreeDayRAG, stringsAsFactors = F)
+                            tempVals, windValsArray, rainFall, snowValsArray, lightningCat = lightningCat, risk = oneTwoThreeDayRAG, stringsAsFactors = F)
   
   outputFrame
     
