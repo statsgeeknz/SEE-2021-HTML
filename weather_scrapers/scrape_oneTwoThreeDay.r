@@ -58,21 +58,24 @@ weatherScraperOneTwoDay <- function(htmlFile){
 
 # Scrape risk class -------------------------------------------------------
   
-  RAGpath <- html_nodes(htmlTarget, "tr:nth-child(3) td:nth-child(10) , 
-                   tr:nth-child(3) td:nth-child(9) , 
-                   tr:nth-child(3) td:nth-child(8) , 
-                   tr:nth-child(3) td:nth-child(7) , 
-                   tr:nth-child(3) td:nth-child(6) , 
-                   tr:nth-child(3) td:nth-child(5) , 
-                   p+ table tr:nth-child(3) td:nth-child(4) , 
-                   p+ table tr:nth-child(3) td:nth-child(3) , 
-                   p+ table tr:nth-child(3) td:nth-child(2)")
+  # RAGpath <- html_nodes(htmlTarget, "tr:nth-child(3) td:nth-child(10) , 
+  #                  tr:nth-child(3) td:nth-child(9) , 
+  #                  tr:nth-child(3) td:nth-child(8) , 
+  #                  tr:nth-child(3) td:nth-child(7) , 
+  #                  tr:nth-child(3) td:nth-child(6) , 
+  #                  tr:nth-child(3) td:nth-child(5) , 
+  #                  p+ table tr:nth-child(3) td:nth-child(4) , 
+  #                  p+ table tr:nth-child(3) td:nth-child(3) , 
+  #                  p+ table tr:nth-child(3) td:nth-child(2)")
   
-  oneAndTwoDayRAG <- lapply(RAGpath, function(q){
+  RAGpath <- html_nodes(htmlTarget, "p~ p+ table tr:nth-child(3) td+ td")
+  
+  
+  oneTwoThreeDayRAG <- lapply(RAGpath, function(q){
       risks <- strsplit(as.character(q), "value=")[[1]][2]
       risks <- strsplit(risks, '\"')[[1]][2]
       risks
-    }) %>% unlist() %>% as.character()
+    }) %>% unlist() %>% as.character() %>% na.omit()
   
    
 
@@ -231,7 +234,7 @@ weatherScraperOneTwoDay <- function(htmlFile){
 # gather all together -----------------------------------------------------
 
   outputFrame <- data.frame(scheduledForecast = scheduledForecast, dateOfForecast = dateVals, day = days, region = rep(groups, 2), regionCode = groupCode, 
-                            tempVals, windValsArray, rainVals, snowValsArray, lightningCat = lightningCat, risk = oneAndTwoDayRAG, stringsAsFactors = F)
+                            tempVals, windValsArray, rainVals, snowValsArray, lightningCat = lightningCat, risk = oneTwoThreeDayRAG, stringsAsFactors = F)
   
   outputFrame
     
