@@ -53,7 +53,7 @@ weatherScraperOneTwoDay <- function(htmlFile){
   
   days <- rep(c(1,2,3), c(9,9,9))
   
-  outputGroups <- rep(groups, 2)
+  outputGroups <- rep(groups, 3)
   
 
 # Scrape risk class -------------------------------------------------------
