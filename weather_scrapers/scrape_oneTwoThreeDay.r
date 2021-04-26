@@ -38,6 +38,8 @@ weatherScraperOneTwoDay <- function(htmlFile){
   
   htmlTarget <- read_html(htmlFile)
   
+  numDays <- 3
+  numRegions <- 9
 
 # Scrape region names -----------------------------------------------------
 
@@ -83,13 +85,13 @@ weatherScraperOneTwoDay <- function(htmlFile){
 # Region groups -----------------------------------------------------------
   # date is in the header - save parsing til prediction
   
-  datePath <- html_nodes(htmlTarget, "h1") 
+  datePath <- html_nodes(htmlTarget, ".header-north+ h1")[1] 
   
   # determine if scheduled forecast, or update
   scheduledForecast <- grepl("Scheduled", datePath)
   
   datePath <- unlist(strsplit(as.character(datePath), "-"))
-  dateVals <- datePath[5]
+  dateVals <- datePath[3]
   dateVals <- unlist(strsplit(as.character(dateVals), "[ ,<]"))[3:5]
   dateVals <- paste(dateVals, collapse = '-')
 
@@ -233,7 +235,7 @@ weatherScraperOneTwoDay <- function(htmlFile){
 
 # gather all together -----------------------------------------------------
 
-  outputFrame <- data.frame(scheduledForecast = scheduledForecast, dateOfForecast = dateVals, day = days, region = rep(groups, 2), regionCode = groupCode, 
+  outputFrame <- data.frame(scheduledForecast = scheduledForecast, dateOfForecast = dateVals, day = days, region = rep(groups, numDays), regionCode = groupCode, 
                             tempVals, windValsArray, rainVals, snowValsArray, lightningCat = lightningCat, risk = oneTwoThreeDayRAG, stringsAsFactors = F)
   
   outputFrame
