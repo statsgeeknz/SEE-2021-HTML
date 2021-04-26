@@ -102,17 +102,8 @@ weatherScraperOneTwoDay <- function(htmlFile){
   
   maxMinTempPath <- html_nodes(htmlTarget, "p+ table tr:nth-child(4) td+ td")
   
-  # there is a change in the table structure around the 1800th HTML file (one cell less)
-  if(length(maxMinTempPath) == 36){
-    
-    maxMinTempPath <- maxMinTempPath[c(1:36)]
-    
-  } else {
-  
-    maxMinTempPath <- maxMinTempPath[c(1:18, 20:37)]
-  
-  }
-  
+  maxMinTempPath <- maxMinTempPath[c(1:36)]
+
   tempVals <- lapply(maxMinTempPath, function(q){
     maxMinTemps <- strsplit(as.character(q), "value=")[[1]][2]
     maxMinTemps <- strsplit(maxMinTemps, '\"')[[1]][2]
