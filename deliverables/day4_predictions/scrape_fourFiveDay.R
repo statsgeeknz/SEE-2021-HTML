@@ -2,10 +2,11 @@
 #' weatherScraper - Bellrock variant
 #' Author: CRD
 #' Created: 10/07/18
+#' Modified April 2021: new data format, day  as per days 1 & 2
 #' 
-#' Purpose: Function for scraping 3-5 day weather forecasts from meteogroup hmtl
+#' 
+#' Purpose: Function for scraping 4-5 day weather forecasts from meteogroup hmtl
 #' selectorGadget used to ID CSS definitions for desired bits
-#' (Some not divisible solely this way - some hacking required)
 #' 
 #' Args: 
 #'  - htmlFile: path to html to be scraped (NB assumes this is the current North version)
