@@ -16,7 +16,7 @@
   
 
 weatherScraperFourFiveDay <- function(htmlFile){
-    
+    browser()
   require(rvest)
   require(lubridate)
   require(tidyverse)
@@ -29,9 +29,9 @@ weatherScraperFourFiveDay <- function(htmlFile){
   
   groupCode <- paste("G", 1:3, sep='')
   
-  groupCode <- rep(groupCode, 3)
+  groupCode <- rep(groupCode, 2)
   
-  days <- rep(c(3,4,5), c(3, 3, 3))
+  days <- rep(c(4,5), c(3, 3))
   
   outputGroups <- rep(groups, 3)
   
@@ -41,34 +41,26 @@ weatherScraperFourFiveDay <- function(htmlFile){
 # Region groups -----------------------------------------------------------
   # dates is in the header - save parsing til prediction
   
-  datePath <- html_nodes(htmlTarget, "h1")
-  
+  datePath <- html_nodes(htmlTarget, ".header-north+ h1")[1] 
   
   # determine if scheduled forecast, or update
   scheduledForecast <- grepl("Scheduled", datePath)
   
   datePath <- unlist(strsplit(as.character(datePath), "-"))
-  dateVals <- datePath[5]
+  dateVals <- datePath[3]
   dateVals <- unlist(strsplit(as.character(dateVals), "[ ,<]"))[3:5]
   dateVals <- paste(dateVals, collapse = '-')
+  
 
 
 # Temperature -------------------------------------------------------------
   # temperature - min and max. Odd structure, select individually
   
-  tempPath <- html_nodes(htmlTarget, ".day3_5 tr:nth-child(6) td:nth-child(2),
-                         .day3_5 tr:nth-child(6) td:nth-child(3),
-                         .day3_5 tr:nth-child(6) td:nth-child(4), 
-                         .day3_5 tr:nth-child(6) td:nth-child(5),
-                         .day3_5 tr:nth-child(6) td:nth-child(6),
-                         .day3_5 tr:nth-child(6) td:nth-child(7),
-                         .day3_5 tr:nth-child(6) td:nth-child(8),
-                         .day3_5 tr:nth-child(6) td:nth-child(9),
-                         .day3_5 tr:nth-child(6) td:nth-child(10)")
+  tempPath <- html_nodes(htmlTarget, ".header-logo tr:nth-child(6) td+ td")
   
   tempPath <- unlist(strsplit(as.character(tempPath), " "))
   tempPath <- tempPath[grep("value", tempPath)]
-  tempVals <- as.numeric(gsub("\\D", "", tempPath)) 
+  tempVals <- tempPath %>% parse_number() 
   tempVals <- matrix(tempVals, ncol = 2, byrow = T)
   tempVals <- as.data.frame(tempVals); names(tempVals) <- c('temp_max', 'temp_min')
 
