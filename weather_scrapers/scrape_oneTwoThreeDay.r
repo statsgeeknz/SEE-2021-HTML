@@ -2,10 +2,10 @@
 #' weatherScraper - Bellrock variant
 #' Author: CRD
 #' Created: 03/11/2019
+#' Modified: April 2021 - addition of day 3
 #' 
-#' Purpose: Function for scraping 1 & 2  day weather forecasts from meteogroup hmtl
+#' Purpose: Function for scraping 1, 2 & 3 day weather forecasts from meteogroup hmtl
 #' selectorGadget used to ID CSS definitions for desired bits
-#' (Some not divisible solely this way - some hacking required)
 #' 
 #' Args: 
 #'  - htmlFile: path to html to be scraped (NB assumes this is the current North version)
@@ -29,7 +29,7 @@
 
   
   
-weatherScraperOneTwoDay <- function(htmlFile){
+weatherScraperOneTwoThreeDay <- function(htmlFile){
     
   require(rvest)
   require(lubridate)
@@ -37,9 +37,6 @@ weatherScraperOneTwoDay <- function(htmlFile){
   
   
   htmlTarget <- read_html(htmlFile)
-  
-  numDays <- 3
-  numRegions <- 9
 
 # Scrape region names -----------------------------------------------------
 
@@ -116,10 +113,9 @@ weatherScraperOneTwoDay <- function(htmlFile){
   windValues <- regmatches(windValues, gregexpr('(?<=value=").*(?=" disable)', windValues, perl = TRUE )) %>% 
     unlist() 
   
+  # three measures in the table - locate/separate out
   meanSpeed <- windValues[meanLoc] %>% parse_number()
-  
   direction <- windValues[dirLoc]
-  
   gust <- windValues[gustLoc] %>% parse_number()
     
   windDays <- rep(c("Day1", "Day2", "Day3"), rep(9*4, 3))
@@ -208,8 +204,7 @@ weatherScraperOneTwoDay <- function(htmlFile){
 
 # Lightning ---------------------------------------------------------------
   #= lightning categories
-  browser()
-  
+
   lightningPath <- html_nodes(htmlTarget, "tr:nth-child(20) td , tr:nth-child(19) td , tr:nth-child(18) td , tr:nth-child(17) td")
   
   lightningVals <- lightningPath[grep("value", lightningPath)]
@@ -231,7 +226,7 @@ weatherScraperOneTwoDay <- function(htmlFile){
 
 # gather all together -----------------------------------------------------
 
-  outputFrame <- data.frame(scheduledForecast = scheduledForecast, dateOfForecast = dateVals, day = days, region = rep(groups, numDays), regionCode = groupCode, 
+  outputFrame <- data.frame(scheduledForecast = scheduledForecast, dateOfForecast = dateVals, day = days, region = rep(groups, 3), regionCode = groupCode, 
                             tempVals, windValsArray, rainFall, snowValsArray, lightningCat = lightningCat, risk = oneTwoThreeDayRAG, stringsAsFactors = F)
   
   outputFrame
