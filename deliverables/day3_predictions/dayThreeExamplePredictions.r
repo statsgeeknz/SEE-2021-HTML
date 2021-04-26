@@ -4,13 +4,13 @@
 
 
   library(jsonlite)  
-  source("scrape_threeFiveDay.r")
+  source("scrape_oneTwoThreeDay.r")
   source("tools.r")
   source("predict_fault_3_day_forecast.R")
 
 
   # scrape an example HTML file
-  exampleForecast <-  weatherScraperThreeFiveDay("north_2015_10_03_05_11_41.html") 
+  exampleForecast <-  weatherScraperOneTwoThreeDay("https://statsgeeknz.github.io/") 
   
   # create a list object with the two days separated. 
   # Using names inferred from JSON file sent from Bellrock
