@@ -68,16 +68,22 @@ weatherScraperFourFiveDay <- function(htmlFile){
 # Wind --------------------------------------------------------------------
   #= Wind values - mean, direction and gust. Units?
   
-  windPath <- html_nodes(htmlTarget, ".day3_5 tr:nth-child(8) td")
-  windPath <- unlist(strsplit(as.character(windPath), " "))
-  windVals <- windPath[grep("value", windPath)]
-  windVals <- gsub('value=\"', "", windVals) %>%
-    gsub('\"', "", .) %>% gsub('></td>', "", .) %>% gsub('\r\n', "", .)
+  windPath <- html_nodes(htmlTarget, ".header-logo tr:nth-child(8) .combo td")
   
- 
-  wind_mean <- as.numeric(windVals[seq(1, 54, by = 6)])
-  wind_direction <- windVals[seq(2, 54, by = 6)]
-  wind_gust <- as.numeric(windVals[seq(3, 54, by = 6)])
+  windValues <- windPath[grepl("value", windPath)]
+  
+  # locate rows of different measures
+  meanLoc <- grepl("wind_mean", windValues)
+  dirLoc <- grepl("wind_dir", windValues)
+  gustLoc <- grepl("wind_gust", windValues)
+  
+  windValues <- regmatches(windValues, gregexpr('(?<=value=").*(?=" disable)', windValues, perl = TRUE )) %>% 
+    unlist() 
+  
+  # three measures in the table - locate/separate out
+  wind_mean <- windValues[meanLoc] %>% parse_number()
+  wind_direction <- windValues[dirLoc]
+  wind_gust <- windValues[gustLoc] %>% parse_number()
   
   windValsArray <- data.frame(wind_mean, wind_direction, wind_gust, stringsAsFactors = F)
   
