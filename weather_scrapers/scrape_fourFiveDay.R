@@ -92,13 +92,13 @@ weatherScraperFourFiveDay <- function(htmlFile){
 # Rain --------------------------------------------------------------------
   #= rain in mm - get min and max
   
-  rainPath <- html_nodes(htmlTarget, ".day3_5 tr:nth-child(10) td")
+  rainPath <- html_nodes(htmlTarget, ".header-logo tr:nth-child(10) td+ td")
   
-  rainPath <- unlist(strsplit(as.character(rainPath), " "))
-  rainVals <- rainPath[grep("value", rainPath)]
-  rainVals <- as.numeric(gsub("[^0-9.]", "", rainVals)) 
-  # rainVals <- as.numeric(gsub("\\D", "", rainVals)) # error found by Bellrock
+  rainVals <- regmatches(rainPath, gregexpr('(?<=value=").*(?=" disable)', rainPath, perl = TRUE )) %>% 
+    unlist() %>% parse_number() 
+  
   rainVals <- matrix(rainVals, ncol = 2, byrow = T)
+  
   rainVals <- as.data.frame(rainVals); names(rainVals) <- c('rain_min', 'rain_max')
   
   
