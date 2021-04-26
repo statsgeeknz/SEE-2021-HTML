@@ -6,3 +6,4 @@ temp.txt
 scraperOutput.csv
 .Rhistory
 *.rds
+*.json
