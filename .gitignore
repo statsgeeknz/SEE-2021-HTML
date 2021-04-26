@@ -5,3 +5,4 @@ SEE-2021-HTML.Rproj
 temp.txt
 scraperOutput.csv
 .Rhistory
+*.rds
