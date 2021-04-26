@@ -16,7 +16,7 @@
   
 
 weatherScraperFourFiveDay <- function(htmlFile){
-    browser()
+    
   require(rvest)
   require(lubridate)
   require(tidyverse)
@@ -134,11 +134,7 @@ weatherScraperFourFiveDay <- function(htmlFile){
   
   lightningVals <- regmatches(lightningPath, gregexpr('(?<=value=").*(?=" disable)', lightningPath, perl = TRUE )) %>% unlist()
   
-
-# Link to fault date ------------------------------------------------------
-  #= deal with dates outside function
-  # faultDate <- datePath + days(days-1) 
-
+  
 # gather all together -----------------------------------------------------
 
   outputFrame <- data.frame(scheduledForecast = scheduledForecast, dateOfForecast = dateVals, day = days, region = groups, regionCode = groupCode, 
