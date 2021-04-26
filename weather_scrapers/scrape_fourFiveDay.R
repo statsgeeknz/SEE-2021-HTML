@@ -128,13 +128,11 @@ weatherScraperFourFiveDay <- function(htmlFile){
 # Lightning ---------------------------------------------------------------
   #= lightning categories
   
-  lightningPath <- html_nodes(htmlTarget, ".day3_5 tr:nth-child(14) td")
+  lightningPath <- html_nodes(htmlTarget, ".header-logo tr:nth-child(14) td+ td")
   
-  lightningPath <- unlist(strsplit(as.character(lightningPath), " "))
-  lightningVals <- lightningPath[grep("value", lightningPath)]
+  lightningPath <- lightningPath[grepl("value", lightningPath)]
   
-  lightningVals <- gsub('value=\"', "", lightningVals) %>%
-    gsub('\">', "", .) %>% gsub('\n</td>', "", .)
+  lightningVals <- regmatches(lightningPath, gregexpr('(?<=value=").*(?=" disable)', lightningPath, perl = TRUE )) %>% unlist()
   
 
 # Link to fault date ------------------------------------------------------
