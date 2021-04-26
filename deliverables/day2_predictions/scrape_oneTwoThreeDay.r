@@ -2,10 +2,10 @@
 #' weatherScraper - Bellrock variant
 #' Author: CRD
 #' Created: 03/11/2019
+#' Modified: April 2021 - addition of day 3
 #' 
-#' Purpose: Function for scraping 1 & 2  day weather forecasts from meteogroup hmtl
+#' Purpose: Function for scraping 1, 2 & 3 day weather forecasts from meteogroup hmtl
 #' selectorGadget used to ID CSS definitions for desired bits
-#' (Some not divisible solely this way - some hacking required)
 #' 
 #' Args: 
 #'  - htmlFile: path to html to be scraped (NB assumes this is the current North version)
@@ -29,7 +29,7 @@
 
   
   
-weatherScraperOneTwoDay <- function(htmlFile){
+weatherScraperOneTwoThreeDay <- function(htmlFile){
     
   require(rvest)
   require(lubridate)
@@ -37,7 +37,6 @@ weatherScraperOneTwoDay <- function(htmlFile){
   
   
   htmlTarget <- read_html(htmlFile)
-  
 
 # Scrape region names -----------------------------------------------------
 
@@ -48,31 +47,24 @@ weatherScraperOneTwoDay <- function(htmlFile){
   # 9 regions collected
   groupCode <- paste("G", 1:9, sep='')
   
-  # collecting for two days (day 1 and day 2)
-  groupCode <- rep(groupCode, 2)
+  # collecting for two days (day 1, 2 & 3)
+  groupCode <- rep(groupCode, 3)
   
-  days <- rep(c(1,2), c(9,9))
+  days <- rep(c(1,2,3), c(9,9,9))
   
-  outputGroups <- rep(groups, 2)
+  outputGroups <- rep(groups, 3)
   
 
 # Scrape risk class -------------------------------------------------------
+ 
+  RAGpath <- html_nodes(htmlTarget, "p~ p+ table tr:nth-child(3) td+ td")
   
-  RAGpath <- html_nodes(htmlTarget, "tr:nth-child(3) td:nth-child(10) , 
-                   tr:nth-child(3) td:nth-child(9) , 
-                   tr:nth-child(3) td:nth-child(8) , 
-                   tr:nth-child(3) td:nth-child(7) , 
-                   tr:nth-child(3) td:nth-child(6) , 
-                   tr:nth-child(3) td:nth-child(5) , 
-                   p+ table tr:nth-child(3) td:nth-child(4) , 
-                   p+ table tr:nth-child(3) td:nth-child(3) , 
-                   p+ table tr:nth-child(3) td:nth-child(2)")
   
-  oneAndTwoDayRAG <- lapply(RAGpath, function(q){
+  oneTwoThreeDayRAG <- lapply(RAGpath, function(q){
       risks <- strsplit(as.character(q), "value=")[[1]][2]
       risks <- strsplit(risks, '\"')[[1]][2]
       risks
-    }) %>% unlist() %>% as.character()
+    }) %>% unlist() %>% as.character() %>% na.omit()
   
    
 
@@ -80,13 +72,13 @@ weatherScraperOneTwoDay <- function(htmlFile){
 # Region groups -----------------------------------------------------------
   # date is in the header - save parsing til prediction
   
-  datePath <- html_nodes(htmlTarget, "h1") 
+  datePath <- html_nodes(htmlTarget, ".header-north+ h1")[1] 
   
   # determine if scheduled forecast, or update
   scheduledForecast <- grepl("Scheduled", datePath)
   
   datePath <- unlist(strsplit(as.character(datePath), "-"))
-  dateVals <- datePath[5]
+  dateVals <- datePath[3]
   dateVals <- unlist(strsplit(as.character(dateVals), "[ ,<]"))[3:5]
   dateVals <- paste(dateVals, collapse = '-')
 
@@ -97,48 +89,43 @@ weatherScraperOneTwoDay <- function(htmlFile){
   
   maxMinTempPath <- html_nodes(htmlTarget, "p+ table tr:nth-child(4) td+ td")
   
-  # there is a change in the table structure around the 1800th HTML file (one cell less)
-  if(length(maxMinTempPath) == 36){
-    
-    maxMinTempPath <- maxMinTempPath[c(1:36)]
-    
-  } else {
+  tempVals <- maxMinTempPath[grepl("value", maxMinTempPath)]
   
-    maxMinTempPath <- maxMinTempPath[c(1:18, 20:37)]
-  
-  }
-  
-  tempVals <- lapply(maxMinTempPath, function(q){
-    maxMinTemps <- strsplit(as.character(q), "value=")[[1]][2]
-    maxMinTemps <- strsplit(maxMinTemps, '\"')[[1]][2]
-    maxMinTemps 
-    }) %>% 
-    unlist() %>% as.numeric() %>% matrix(., ncol = 2, byrow = T) %>%
-    as.data.frame() %>% rename(temp_max = V1, temp_min = V2)
+  tempVals <- regmatches(tempVals, gregexpr("(?<=value).*(?=disable)", tempVals, perl = TRUE )) %>% 
+    unlist() %>% parse_number() %>% 
+    matrix(., ncol = 2, byrow = T) %>%
+    as.data.frame() %>% 
+    rename(temp_max = V1, temp_min = V2)
 
 
 # Wind --------------------------------------------------------------------
   #= Wind values - mean, direction and gust. Units?
   
-  windPath <- html_nodes(htmlTarget, "tr:nth-child(9) .combo td , 
-                     p+ table tr:nth-child(8) .combo td , 
-                     p+ table tr:nth-child(7) .combo td , 
-                     tr:nth-child(6) .combo td")
+  windPath <- html_nodes(htmlTarget, "p~ p+ table .wind td")
   
-  windValues <- lapply(windPath, function(q){
-    temp <- strsplit(as.character(q), "value=")[[1]][2]
-    temp <- strsplit(temp, '\"')[[1]][2]
-    temp
-  }) %>% unlist()
+  windValues <- windPath[grepl("value", windPath)]
   
-  meanSpeed <- windValues[seq(1, 216, by = 3)]
-  direction <- windValues[seq(2, 216, by = 3)]
-  gust <- windValues[seq(3, 216, by = 3)]
-  summaryGroup <- c(rep(1:9, 4), rep(10:18, 4))
+  # locate rows of different measures
+  meanLoc <- grepl("wind_mean", windValues)
+  dirLoc <- grepl("wind_dir", windValues)
+  gustLoc <- grepl("wind_gust", windValues)
+  
+  windValues <- regmatches(windValues, gregexpr('(?<=value=").*(?=" disable)', windValues, perl = TRUE )) %>% 
+    unlist() 
+  
+  # three measures in the table - locate/separate out
+  meanSpeed <- windValues[meanLoc] %>% parse_number()
+  direction <- windValues[dirLoc]
+  gust <- windValues[gustLoc] %>% parse_number()
+    
+  windDays <- rep(c("Day1", "Day2", "Day3"), rep(9*4, 3))
+  windRegions <- rep(1:9, 3*4)
+  
+  summaryGroup <- paste(windDays, windRegions, sep = "_")
   
   # averaging the wind vectors for the different times of the day
-  windValsArray <- data.frame(summaryGroup = summaryGroup, meanSpeed = as.numeric(meanSpeed), 
-                         direction = direction, gust = as.numeric(gust)) %>%
+  windValsArray <- data.frame(summaryGroup = summaryGroup, meanSpeed = meanSpeed, 
+                         direction = direction, gust = gust) %>%
               mutate(numericDirection = case_when(
                 direction == "N" ~ 360,
                 direction == "NE" ~ 45, 
@@ -161,48 +148,54 @@ weatherScraperOneTwoDay <- function(htmlFile){
 # Rain --------------------------------------------------------------------
   #= rain in mm - get min and max
   
-  rainPath <- html_nodes(htmlTarget, "p+ table tr:nth-child(12) td+ td , p+ table tr:nth-child(11) td+ td")
-  
+  rainPath <- html_nodes(htmlTarget, "p~ p+ table tr:nth-child(12) td , p~ p+ table tr:nth-child(11) td")
     
-    rainVals <- lapply(rainPath, function(q){
-      temp <- strsplit(as.character(q), "value=")[[1]][c(2,3)]
-      temp <- strsplit(temp, '\"')
-      temp <- c(temp[[1]][2], temp[[2]][2])
-      temp
-    }) %>% unlist()
+    rainVals <- rainPath[grepl("value", rainPath)]
     
-    rainVals <- na.omit(rainVals)
+    rainVals <- regmatches(rainVals, gregexpr("(?<=value).*(?=disable)", rainVals, perl = TRUE )) %>% 
+      unlist() %>% parse_number() %>% 
+      matrix(., ncol = 2, byrow = T) %>%
+      as.data.frame() %>% rename(rain_min = V1, rain_max = V2)
     
-    summaryGroup <- c(rep(rep(1:9, rep(2, 9)),2), rep(rep(10:18, rep(2, 9)),2))
+    rainDays <- rep(c("Day1", "Day2", "Day3"), rep(9*2, 3))
+    rainRegions <- rep(1:9, 3*2)
     
-    rainVals <- data.frame(summaryGroup = summaryGroup, rainFall = as.numeric(rainVals)) %>%
+    summaryGroup <- paste(rainDays, rainRegions, sep = "_")
+    
+    rainFall <- rainVals %>% bind_cols(summaryGroup = summaryGroup) %>% 
       group_by(summaryGroup) %>%
-      summarise(rain_max = max(rainFall, na.rm = T), rain_min = min(rainFall, na.rm = T)) %>%
+      summarise(rain_min = min(rain_min, na.rm = T), rain_max = max(rain_max, na.rm = T)) %>%
       select(-summaryGroup)  
   
   
 # Snow/line icing ---------------------------------------------------------
   #= level of icing groups + snow height (cm) and height (m above sea-level I guess)
-  
+    
   snowPath <- html_nodes(htmlTarget, "tr:nth-child(15) .combo td , tr:nth-child(14) .combo td")
 
-  snowPath <- unlist(strsplit(as.character(snowPath), " "))
-  snowVals <- snowPath[grep("value", snowPath)]
-  snowVals <- gsub('value=\"', "", snowVals) %>% 
-    gsub('"></td>', "", .) %>% gsub('">\n</td>', "", .) 
+  snowVals <- snowPath[grepl("value", snowPath)]
   
-  snowValsArray <- array(dim = c(36, 3))
+  iceLoc <- grepl("line_icing", snowVals)
+  snowFallLoc <- grepl("snowfall", snowVals)
+  snowHeightLoc <- grepl("snow_height", snowVals)
   
-  snowValsArray[,1] <- snowVals[seq(1, 108, by = 3)]
-  snowValsArray[,2] <- snowVals[seq(2, 108, by = 3)]
-  snowValsArray[,3] <- snowVals[seq(3, 108, by = 3)]
- 
+  snowVals <- regmatches(snowVals, gregexpr('(?<=value=").*(?=" disable)', snowVals, perl = TRUE )) %>%
+    unlist()
+  
+  snow_depth <- as.numeric(snowVals[snowFallLoc])
+  icing <- snowVals[iceLoc] 
+  icing <- ifelse(icing == "Nil", 0, 1)
+  snow_height <- snowVals[snowHeightLoc]
+  snow_height <- as.numeric(ifelse(snow_height == "N/A", NA, snow_height)) 
+  
+  snowDays <- rep(c("Day1", "Day2", "Day3"), rep(9*2, 3))
+  snowRegions <- rep(1:9, 2*3)
+  
+  summaryGroup <- paste(snowDays, snowRegions, sep = "_")
+  
+
   # average the snow depths, heights usually empty (choose first one per day), icing made binary
-  snowValsArray <- as.data.frame(snowValsArray, stringsAsFactors = F) %>%
-    mutate(summaryGroup = c(rep(1:9, 2), rep(10:18, 2))) %>%
-    rename(snow_depth = V1, icing = V2, snow_height = V3) %>%
-    mutate(snow_depth = as.numeric(snow_depth), icing = ifelse(icing == "Nil", 0, 1),
-           snow_height = as.numeric(ifelse(snow_height == "N/A", NA, snow_height))) %>%
+  snowValsArray <- data.frame(snow_depth, icing, snow_height, summaryGroup) %>%
     group_by(summaryGroup) %>% summarise(snow_depth = mean(snow_depth, na.rm = T),
                                          icing = ifelse(any(icing == 1), 1, 0),
                                          snow_height = snow_height[1]) %>% select(-summaryGroup)
@@ -211,26 +204,30 @@ weatherScraperOneTwoDay <- function(htmlFile){
 
 # Lightning ---------------------------------------------------------------
   #= lightning categories
+
+  lightningPath <- html_nodes(htmlTarget, "tr:nth-child(20) td , tr:nth-child(19) td , tr:nth-child(18) td , tr:nth-child(17) td")
   
-  lightningPath <- html_nodes(htmlTarget, "tr:nth-child(18) td+ td , tr:nth-child(17) td+ td")
-  
-  lightningPath <- unlist(strsplit(as.character(lightningPath), " "))
   lightningVals <- lightningPath[grep("value", lightningPath)]
   
-  lightningVals <- gsub('value=\"', "", lightningVals) %>%
-    gsub('\">', "", .) %>% gsub('\n</td>', "", .) 
+  lightningVals <- regmatches(lightningVals, gregexpr('(?<=value=").*(?=" disable)', lightningVals, perl = TRUE )) %>%
+    unlist()
+  
+  lightDays <- rep(c("Day1", "Day2", "Day3"), rep(9*4, 3))
+  lightRegions <- rep(1:9, 4*3)
+  
+  summaryGroup <- paste(lightDays, lightRegions, sep = "_")
   
   # arrange such that most severe group is chosen (i.e. towards category 1)
   lightningCat <- data.frame(lightningCat = lightningVals, 
-                              summaryGroup = c(rep(1:9, 2), rep(10:18, 2)), stringsAsFactors = F) %>%
+                              summaryGroup = summaryGroup) %>%
              group_by(summaryGroup) %>% arrange(lightningCat) %>%
              summarise(lightningCat = lightningCat[1]) %>% select(-summaryGroup)
   
 
 # gather all together -----------------------------------------------------
 
-  outputFrame <- data.frame(scheduledForecast = scheduledForecast, dateOfForecast = dateVals, day = days, region = rep(groups, 2), regionCode = groupCode, 
-                            tempVals, windValsArray, rainVals, snowValsArray, lightningCat = lightningCat, risk = oneAndTwoDayRAG, stringsAsFactors = F)
+  outputFrame <- data.frame(scheduledForecast = scheduledForecast, dateOfForecast = dateVals, day = days, region = rep(groups, 3), regionCode = groupCode, 
+                            tempVals, windValsArray, rainFall, snowValsArray, lightningCat = lightningCat, risk = oneTwoThreeDayRAG, stringsAsFactors = F)
   
   outputFrame
     

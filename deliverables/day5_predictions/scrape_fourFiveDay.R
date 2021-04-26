@@ -15,7 +15,7 @@
 #'  snow/line-icing (depth/icing/height), lightning (risk group)
   
 
-weatherScraperThreeFiveDay <- function(htmlFile){
+weatherScraperFourFiveDay <- function(htmlFile){
     
   require(rvest)
   require(lubridate)
@@ -29,9 +29,9 @@ weatherScraperThreeFiveDay <- function(htmlFile){
   
   groupCode <- paste("G", 1:3, sep='')
   
-  groupCode <- rep(groupCode, 3)
+  groupCode <- rep(groupCode, 2)
   
-  days <- rep(c(3,4,5), c(3, 3, 3))
+  days <- rep(c(4,5), c(3, 3))
   
   outputGroups <- rep(groups, 3)
   
@@ -41,34 +41,26 @@ weatherScraperThreeFiveDay <- function(htmlFile){
 # Region groups -----------------------------------------------------------
   # dates is in the header - save parsing til prediction
   
-  datePath <- html_nodes(htmlTarget, "h1")
-  
+  datePath <- html_nodes(htmlTarget, ".header-north+ h1")[1] 
   
   # determine if scheduled forecast, or update
   scheduledForecast <- grepl("Scheduled", datePath)
   
   datePath <- unlist(strsplit(as.character(datePath), "-"))
-  dateVals <- datePath[5]
+  dateVals <- datePath[3]
   dateVals <- unlist(strsplit(as.character(dateVals), "[ ,<]"))[3:5]
   dateVals <- paste(dateVals, collapse = '-')
+  
 
 
 # Temperature -------------------------------------------------------------
   # temperature - min and max. Odd structure, select individually
   
-  tempPath <- html_nodes(htmlTarget, ".day3_5 tr:nth-child(6) td:nth-child(2),
-                         .day3_5 tr:nth-child(6) td:nth-child(3),
-                         .day3_5 tr:nth-child(6) td:nth-child(4), 
-                         .day3_5 tr:nth-child(6) td:nth-child(5),
-                         .day3_5 tr:nth-child(6) td:nth-child(6),
-                         .day3_5 tr:nth-child(6) td:nth-child(7),
-                         .day3_5 tr:nth-child(6) td:nth-child(8),
-                         .day3_5 tr:nth-child(6) td:nth-child(9),
-                         .day3_5 tr:nth-child(6) td:nth-child(10)")
+  tempPath <- html_nodes(htmlTarget, ".header-logo tr:nth-child(6) td+ td")
   
   tempPath <- unlist(strsplit(as.character(tempPath), " "))
   tempPath <- tempPath[grep("value", tempPath)]
-  tempVals <- as.numeric(gsub("\\D", "", tempPath)) 
+  tempVals <- tempPath %>% parse_number() 
   tempVals <- matrix(tempVals, ncol = 2, byrow = T)
   tempVals <- as.data.frame(tempVals); names(tempVals) <- c('temp_max', 'temp_min')
 
@@ -76,16 +68,22 @@ weatherScraperThreeFiveDay <- function(htmlFile){
 # Wind --------------------------------------------------------------------
   #= Wind values - mean, direction and gust. Units?
   
-  windPath <- html_nodes(htmlTarget, ".day3_5 tr:nth-child(8) td")
-  windPath <- unlist(strsplit(as.character(windPath), " "))
-  windVals <- windPath[grep("value", windPath)]
-  windVals <- gsub('value=\"', "", windVals) %>%
-    gsub('\"', "", .) %>% gsub('></td>', "", .) %>% gsub('\r\n', "", .)
+  windPath <- html_nodes(htmlTarget, ".header-logo tr:nth-child(8) .combo td")
   
- 
-  wind_mean <- as.numeric(windVals[seq(1, 54, by = 6)])
-  wind_direction <- windVals[seq(2, 54, by = 6)]
-  wind_gust <- as.numeric(windVals[seq(3, 54, by = 6)])
+  windValues <- windPath[grepl("value", windPath)]
+  
+  # locate rows of different measures
+  meanLoc <- grepl("wind_mean", windValues)
+  dirLoc <- grepl("wind_dir", windValues)
+  gustLoc <- grepl("wind_gust", windValues)
+  
+  windValues <- regmatches(windValues, gregexpr('(?<=value=").*(?=" disable)', windValues, perl = TRUE )) %>% 
+    unlist() 
+  
+  # three measures in the table - locate/separate out
+  wind_mean <- windValues[meanLoc] %>% parse_number()
+  wind_direction <- windValues[dirLoc]
+  wind_gust <- windValues[gustLoc] %>% parse_number()
   
   windValsArray <- data.frame(wind_mean, wind_direction, wind_gust, stringsAsFactors = F)
   
@@ -94,13 +92,13 @@ weatherScraperThreeFiveDay <- function(htmlFile){
 # Rain --------------------------------------------------------------------
   #= rain in mm - get min and max
   
-  rainPath <- html_nodes(htmlTarget, ".day3_5 tr:nth-child(10) td")
+  rainPath <- html_nodes(htmlTarget, ".header-logo tr:nth-child(10) td+ td")
   
-  rainPath <- unlist(strsplit(as.character(rainPath), " "))
-  rainVals <- rainPath[grep("value", rainPath)]
-  rainVals <- as.numeric(gsub("[^0-9.]", "", rainVals)) 
-  # rainVals <- as.numeric(gsub("\\D", "", rainVals)) # error found by Bellrock
+  rainVals <- regmatches(rainPath, gregexpr('(?<=value=").*(?=" disable)', rainPath, perl = TRUE )) %>% 
+    unlist() %>% parse_number() 
+  
   rainVals <- matrix(rainVals, ncol = 2, byrow = T)
+  
   rainVals <- as.data.frame(rainVals); names(rainVals) <- c('rain_min', 'rain_max')
   
   
@@ -109,43 +107,34 @@ weatherScraperThreeFiveDay <- function(htmlFile){
   #= level of icing groups + snow height (cm) and height (m above sea-level I guess)
   
   snowPath <- html_nodes(htmlTarget, "tr:nth-child(12) .combo td")
-
-  snowPath <- unlist(strsplit(as.character(snowPath), " "))
-  snowVals <- snowPath[grep("value", snowPath)]
-  snowVals <- gsub('value=\"', "", snowVals) %>% 
-    gsub('"></td>', "", .) %>% gsub('">\n</td>', "", .) 
   
-
-  snow_depth <- snowVals[seq(1, 27, by = 3)]
-  icing <- snowVals[seq(2, 27, by = 3)]
-  snow_height <- snowVals[seq(3, 27, by = 3)]
+  snowPath <- snowPath[grepl("value", snowPath)]
+  
+  iceLoc <- grepl("line_icing", snowPath)
+  snowFallLoc <- grepl("snowfall", snowPath)
+  snowHeightLoc <- grepl("snow_height", snowPath)
+  
+  snowVals <- regmatches(snowPath, gregexpr('(?<=value=").*(?=" disable)', snowPath, perl = TRUE )) %>% unlist()
+  
+  snow_depth <- as.numeric(snowVals[snowFallLoc])
+  icing <- snowVals[iceLoc] 
+  icing <- ifelse(icing == "Nil", 0, 1)
+  snow_height <- snowVals[snowHeightLoc]
+  snow_height <- as.numeric(ifelse(snow_height == "N/A", NA, snow_height)) 
   
   snowValsArray <- data.frame(snow_depth, icing, snow_height, stringsAsFactors = F)
   
-  # average the snow depths, heights usually empty (choose first one per day), icing made binary
-  snowValsArray <- snowValsArray %>% mutate(
-      snow_depth = as.numeric(snow_depth), 
-      icing = ifelse(icing == "Nil", 0, 1),
-      snow_height = as.numeric(ifelse(snow_height == "N/A", NA, snow_height))
-    )
   
-
 # Lightning ---------------------------------------------------------------
   #= lightning categories
   
-  lightningPath <- html_nodes(htmlTarget, ".day3_5 tr:nth-child(14) td")
+  lightningPath <- html_nodes(htmlTarget, ".header-logo tr:nth-child(14) td+ td")
   
-  lightningPath <- unlist(strsplit(as.character(lightningPath), " "))
-  lightningVals <- lightningPath[grep("value", lightningPath)]
+  lightningPath <- lightningPath[grepl("value", lightningPath)]
   
-  lightningVals <- gsub('value=\"', "", lightningVals) %>%
-    gsub('\">', "", .) %>% gsub('\n</td>', "", .)
+  lightningVals <- regmatches(lightningPath, gregexpr('(?<=value=").*(?=" disable)', lightningPath, perl = TRUE )) %>% unlist()
   
-
-# Link to fault date ------------------------------------------------------
-  #= deal with dates outside function
-  # faultDate <- datePath + days(days-1) 
-
+  
 # gather all together -----------------------------------------------------
 
   outputFrame <- data.frame(scheduledForecast = scheduledForecast, dateOfForecast = dateVals, day = days, region = groups, regionCode = groupCode, 
