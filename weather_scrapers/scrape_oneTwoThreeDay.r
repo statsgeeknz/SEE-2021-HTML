@@ -78,7 +78,7 @@ weatherScraperOneTwoThreeDay <- function(htmlFile){
   scheduledForecast <- grepl("Scheduled", datePath)
   
   datePath <- unlist(strsplit(as.character(datePath), "-"))
-  dateVals <- datePath[3]
+  dateVals <- datePath[5]
   dateVals <- unlist(strsplit(as.character(dateVals), "[ ,<]"))[3:5]
   dateVals <- paste(dateVals, collapse = '-')
 
@@ -91,7 +91,7 @@ weatherScraperOneTwoThreeDay <- function(htmlFile){
   
   tempVals <- maxMinTempPath[grepl("value", maxMinTempPath)]
   
-  tempVals <- regmatches(tempVals, gregexpr("(?<=value).*(?=disable)", tempVals, perl = TRUE )) %>% 
+  tempVals <- regmatches(tempVals, gregexpr('(?<=value=").*(?=")', tempVals, perl = TRUE )) %>% 
     unlist() %>% parse_number() %>% 
     matrix(., ncol = 2, byrow = T) %>%
     as.data.frame() %>% 
@@ -110,7 +110,7 @@ weatherScraperOneTwoThreeDay <- function(htmlFile){
   dirLoc <- grepl("wind_dir", windValues)
   gustLoc <- grepl("wind_gust", windValues)
   
-  windValues <- regmatches(windValues, gregexpr('(?<=value=").*(?=" disable)', windValues, perl = TRUE )) %>% 
+  windValues <- regmatches(windValues, gregexpr('(?<=value=").*(?=")', windValues, perl = TRUE )) %>% 
     unlist() 
   
   # three measures in the table - locate/separate out
@@ -152,7 +152,7 @@ weatherScraperOneTwoThreeDay <- function(htmlFile){
     
     rainVals <- rainPath[grepl("value", rainPath)]
     
-    rainVals <- regmatches(rainVals, gregexpr("(?<=value).*(?=disable)", rainVals, perl = TRUE )) %>% 
+    rainVals <- regmatches(rainVals, gregexpr('(?<=value=").*(?=")', rainVals, perl = TRUE )) %>% 
       unlist() %>% parse_number() %>% 
       matrix(., ncol = 2, byrow = T) %>%
       as.data.frame() %>% rename(rain_min = V1, rain_max = V2)
@@ -179,7 +179,7 @@ weatherScraperOneTwoThreeDay <- function(htmlFile){
   snowFallLoc <- grepl("snowfall", snowVals)
   snowHeightLoc <- grepl("snow_height", snowVals)
   
-  snowVals <- regmatches(snowVals, gregexpr('(?<=value=").*(?=" disable)', snowVals, perl = TRUE )) %>%
+  snowVals <- regmatches(snowVals, gregexpr('(?<=value=").*(?=")', snowVals, perl = TRUE )) %>%
     unlist()
   
   snow_depth <- as.numeric(snowVals[snowFallLoc])
@@ -209,7 +209,7 @@ weatherScraperOneTwoThreeDay <- function(htmlFile){
   
   lightningVals <- lightningPath[grep("value", lightningPath)]
   
-  lightningVals <- regmatches(lightningVals, gregexpr('(?<=value=").*(?=" disable)', lightningVals, perl = TRUE )) %>%
+  lightningVals <- regmatches(lightningVals, gregexpr('(?<=value=").*(?=")', lightningVals, perl = TRUE )) %>%
     unlist()
   
   lightDays <- rep(c("Day1", "Day2", "Day3"), rep(9*4, 3))
