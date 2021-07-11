@@ -48,7 +48,7 @@ weatherScraperFourFiveDay <- function(htmlFile){
   scheduledForecast <- grepl("Scheduled", datePath)
   
   datePath <- unlist(strsplit(as.character(datePath), "-"))
-  dateVals <- datePath[3]
+  dateVals <- datePath[5]
   dateVals <- unlist(strsplit(as.character(dateVals), "[ ,<]"))[3:5]
   dateVals <- paste(dateVals, collapse = '-')
   
@@ -78,7 +78,7 @@ weatherScraperFourFiveDay <- function(htmlFile){
   dirLoc <- grepl("wind_dir", windValues)
   gustLoc <- grepl("wind_gust", windValues)
   
-  windValues <- regmatches(windValues, gregexpr('(?<=value=").*(?=" disable)', windValues, perl = TRUE )) %>% 
+  windValues <- regmatches(windValues, gregexpr('(?<=value=").*(?=" style)|(?<=value=").*(?=">)', windValues, perl = TRUE )) %>% 
     unlist() 
   
   # three measures in the table - locate/separate out
@@ -95,7 +95,7 @@ weatherScraperFourFiveDay <- function(htmlFile){
   
   rainPath <- html_nodes(htmlTarget, ".header-logo tr:nth-child(10) td+ td")
   
-  rainVals <- regmatches(rainPath, gregexpr('(?<=value=").*(?=" disable)', rainPath, perl = TRUE )) %>% 
+  rainVals <- regmatches(rainPath, gregexpr('(?<=value=").*(?=">)', rainPath, perl = TRUE )) %>% 
     unlist() %>% parse_number() 
   
   rainVals <- matrix(rainVals, ncol = 2, byrow = T)
@@ -115,7 +115,7 @@ weatherScraperFourFiveDay <- function(htmlFile){
   snowFallLoc <- grepl("snowfall", snowPath)
   snowHeightLoc <- grepl("snow_height", snowPath)
   
-  snowVals <- regmatches(snowPath, gregexpr('(?<=value=").*(?=" disable)', snowPath, perl = TRUE )) %>% unlist()
+  snowVals <- regmatches(snowPath, gregexpr('(?<=value=").*(?=">)', snowPath, perl = TRUE )) %>% unlist()
   
   snow_depth <- as.numeric(snowVals[snowFallLoc])
   icing <- snowVals[iceLoc] 
@@ -133,7 +133,7 @@ weatherScraperFourFiveDay <- function(htmlFile){
   
   lightningPath <- lightningPath[grepl("value", lightningPath)]
   
-  lightningVals <- regmatches(lightningPath, gregexpr('(?<=value=").*(?=" disable)', lightningPath, perl = TRUE )) %>% unlist()
+  lightningVals <- regmatches(lightningPath, gregexpr('(?<=value=").*(?=">)', lightningPath, perl = TRUE )) %>% unlist()
   
   
 # gather all together -----------------------------------------------------

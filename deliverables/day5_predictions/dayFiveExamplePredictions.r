@@ -10,11 +10,11 @@
 
 
   # scrape an example HTML file
-  exampleForecast <-  weatherScraperFourFiveDay("https://statsgeeknz.github.io/") 
+  exampleForecast <-  weatherScraperFourFiveDay("http://feed.meteogroup.co.uk/SSE/north_2021_07_05_06_08_33.html") 
   
   # create a list object with the two days separated. 
-  # Using names inferred from JSON file sent from Bellrock
   exampleForecastList <- list("4_day_forecast" = exampleForecast %>% filter(day == 4),
+  # Using names inferred from JSON file sent from Bellrock
                               "5_day_forecast" = exampleForecast %>% filter(day == 5))
   
   # write to JSON format
