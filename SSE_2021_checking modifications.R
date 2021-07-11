@@ -1,6 +1,6 @@
 # run scrapers on supplied (m)HTML
 
-weatherScraperOneTwoThreeDay("https://statsgeeknz.github.io/")
+weatherScraperOneTwoThreeDay("http://feed.meteogroup.co.uk/SSE/north_2021_07_05_06_08_33.html")
 
 
-weatherScraperFourFiveDay("https://statsgeeknz.github.io/")
+weatherScraperFourFiveDay("http://feed.meteogroup.co.uk/SSE/north_2021_07_05_06_08_33.html")
