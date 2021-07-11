@@ -110,7 +110,7 @@ weatherScraperOneTwoThreeDay <- function(htmlFile){
   dirLoc <- grepl("wind_dir", windValues)
   gustLoc <- grepl("wind_gust", windValues)
   
-  windValues <- regmatches(windValues, gregexpr('(?<=value=").*(?=")', windValues, perl = TRUE )) %>% 
+  windValues <- regmatches(windValues, gregexpr('(?<=value=").*(?=" style)', windValues, perl = TRUE )) %>% 
     unlist() 
   
   # three measures in the table - locate/separate out
